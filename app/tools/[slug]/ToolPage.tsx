@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import FileUpload from '@/components/FileUpload';
 
 interface ToolPageProps {
   slug: string;
@@ -368,74 +369,17 @@ export default function ToolPage({ slug }: ToolPageProps) {
 
           {/* Upload Section */}
           <div className="max-w-3xl mx-auto">
-            <div 
-              className={`relative border-2 border-dashed rounded-3xl p-16 text-center transition-all duration-300 shadow-xl ${
-                isDragging 
-                  ? 'border-red-400 bg-red-50 ring-4 ring-red-100' 
-                  : 'border-gray-300 bg-white hover:border-red-300 hover:bg-red-50/30'
-              }`}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-            >
-              {/* Upload Icon */}
-              <div className="w-20 h-20 mx-auto mb-8 bg-red-100 rounded-full flex items-center justify-center">
-                <i className="ri-upload-cloud-2-line text-red-500 text-3xl"></i>
-              </div>
-
-              {/* Drop Text */}
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">
-                {tool.dropText}
-              </h3>
-              <p className="text-gray-500 mb-8 text-lg">
-                or click to browse files
-              </p>
-
-              {/* File Input */}
-              <input
-                type="file"
-                accept={tool.acceptedFiles}
-                onChange={handleFileSelect}
-                className="hidden"
-                id="file-upload"
-              />
-              <label
-                htmlFor="file-upload"
-                className="inline-block px-10 py-4 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-semibold hover:from-red-600 hover:to-red-700 transition-all duration-300 cursor-pointer whitespace-nowrap shadow-lg hover:shadow-xl transform hover:scale-105"
-              >
-                Select PDF File
-              </label>
-
-              {/* Progress Bar */}
-              {isUploading && (
-                <div className="mt-8">
-                  <div className="w-full bg-gray-200 rounded-full h-3 mb-4">
-                    <div 
-                      className="bg-gradient-to-r from-red-500 to-red-600 h-3 rounded-full transition-all duration-300"
-                      style={{ width: `${uploadProgress}%` }}
-                    ></div>
-                  </div>
-                  <p className="text-gray-600 font-medium">
-                    Processing... {uploadProgress}%
-                  </p>
-                </div>
-              )}
-
-              {/* Success Message */}
-              {isCompleted && (
-                <div className="mt-8 p-6 bg-green-50 border border-green-200 rounded-2xl">
-                  <div className="flex items-center justify-center mb-4">
-                    <i className="ri-check-line text-green-500 text-3xl"></i>
-                  </div>
-                  <p className="text-green-800 font-semibold text-lg">
-                    Processing completed successfully!
-                  </p>
-                  <button className="mt-4 px-8 py-3 bg-green-500 text-white rounded-xl font-semibold hover:bg-green-600 transition-colors whitespace-nowrap">
-                    Download Result
-                  </button>
-                </div>
-              )}
-            </div>
+            <FileUpload 
+              toolType={slug}
+              onConversionComplete={(downloadUrl) => {
+                console.log('Conversion completed:', downloadUrl);
+              }}
+              onError={(error) => {
+                console.error('Conversion error:', error);
+                // You can add a toast notification here
+              }}
+            />
+          </div>
 
             {/* Features Section */}
             <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8">

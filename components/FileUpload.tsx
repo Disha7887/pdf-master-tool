@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
+import { downloadFile, getDownloadFilename } from '../lib/download';
 
 interface FileUploadProps {
   toolType: string;
@@ -12,6 +13,9 @@ interface FileUploadProps {
 export default function FileUpload({ toolType, onConversionComplete, onError }: FileUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [isConverting, setIsConverting] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+  const [originalFilename, setOriginalFilename] = useState<string>('');
   const [progress, setProgress] = useState(0);
   const [jobId, setJobId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -33,6 +37,7 @@ export default function FileUpload({ toolType, onConversionComplete, onError }: 
       return;
     }
 
+    setOriginalFilename(file.name);
     await uploadAndConvert(file);
   };
 
@@ -112,6 +117,7 @@ export default function FileUpload({ toolType, onConversionComplete, onError }: 
         if (job.status === 'completed') {
           setIsConverting(false);
           setProgress(100);
+          setDownloadUrl(job.output_file_url);
           onConversionComplete?.(job.output_file_url);
           return;
         } else if (job.status === 'failed') {
@@ -152,6 +158,20 @@ export default function FileUpload({ toolType, onConversionComplete, onError }: 
 
   const handleDragOver = (event: React.DragEvent) => {
     event.preventDefault();
+  };
+
+  const handleDownload = async () => {
+    if (!downloadUrl) return;
+    
+    setIsDownloading(true);
+    try {
+      const filename = getDownloadFilename(originalFilename, toolType);
+      await downloadFile(downloadUrl, filename);
+    } catch (error) {
+      onError?.(error instanceof Error ? error.message : 'Download failed');
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   return (
@@ -218,6 +238,33 @@ export default function FileUpload({ toolType, onConversionComplete, onError }: 
             {jobId && (
               <p className="text-sm text-gray-500 mt-2">Job ID: {jobId}</p>
             )}
+          </div>
+        )}
+
+        {downloadUrl && !isConverting && !isUploading && (
+          <div>
+            <i className="ri-check-line text-4xl text-green-500 mb-4"></i>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              Processing completed successfully!
+            </h3>
+            <p className="text-gray-600 mb-6">Your file has been converted and is ready for download.</p>
+            <button
+              onClick={handleDownload}
+              disabled={isDownloading}
+              className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isDownloading ? (
+                <>
+                  <i className="ri-download-line mr-2 animate-pulse"></i>
+                  Downloading...
+                </>
+              ) : (
+                <>
+                  <i className="ri-download-line mr-2"></i>
+                  Download Result
+                </>
+              )}
+            </button>
           </div>
         )}
       </div>
