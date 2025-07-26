@@ -10,7 +10,7 @@ export interface ILovePDFResponse {
 
 export class ILovePDFAPI {
   private apiKey: string
-  private baseUrl = 'https://api.ilovepdf.com/v1'
+  private baseUrl = 'https://api.ilovepdf.com'
 
   constructor(apiKey: string) {
     this.apiKey = apiKey
@@ -94,31 +94,60 @@ export class ILovePDFAPI {
     options: Record<string, any> = {}
   ): Promise<ILovePDFResponse> {
     try {
-      const payload = {
-        tool,
-        files: Array.isArray(fileUrl) ? fileUrl : [fileUrl],
-        ...options
+      // Start a new task
+      const startResponse = await fetch(`${this.baseUrl}/start/${tool}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!startResponse.ok) {
+        throw new Error(`Failed to start task: ${startResponse.statusText}`)
       }
 
-      const response = await fetch(`${this.baseUrl}/process`, {
+      const startData = await startResponse.json()
+      const taskId = startData.task
+
+      // Upload files
+      const uploadPromises = (Array.isArray(fileUrl) ? fileUrl : [fileUrl]).map(async (url, index) => {
+        const uploadResponse = await fetch(`${this.baseUrl}/upload/${taskId}/${index}`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${this.apiKey}`
+          },
+          body: JSON.stringify({ url })
+        })
+
+        if (!uploadResponse.ok) {
+          throw new Error(`Failed to upload file ${index}`)
+        }
+      })
+
+      await Promise.all(uploadPromises)
+
+      // Execute the task
+      const executeResponse = await fetch(`${this.baseUrl}/execute/${taskId}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(options)
       })
 
-      if (!response.ok) {
-        throw new Error(`Conversion failed: ${response.statusText}`)
+      if (!executeResponse.ok) {
+        throw new Error(`Task execution failed: ${executeResponse.statusText}`)
       }
 
-      const data = await response.json()
+      const executeData = await executeResponse.json()
+
       return {
         success: true,
         data: {
-          download_url: data.download_url,
-          task_id: data.task_id
+          download_url: executeData.download_url,
+          task_id: taskId
         }
       }
     } catch (error) {
@@ -147,4 +176,4 @@ export class ILovePDFAPI {
 }
 
 // Create singleton instance
-export const ilovepdf = new ILovePDFAPI(process.env.ILOVEPDF_API_KEY || '') 
+export const ilovepdf = new ILovePDFAPI(process.env.ILOVEPDF_API_KEY || 'project_public_b0ed274d64b0b5f198afe045bb02dbe8_XvxFu614c37c8e303c982d3aa7fa26ff7e33b') 
